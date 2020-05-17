@@ -10,6 +10,7 @@ import (
 
 	"github.com/covista/commons/internal/config"
 	"github.com/covista/commons/internal/database"
+	"github.com/covista/commons/internal/logging"
 	"github.com/covista/commons/proto"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"google.golang.org/grpc"
@@ -36,24 +37,26 @@ type Server struct {
 }
 
 func NewWithInsecureDefaults(ctx context.Context) (*Server, error) {
-	grpcAddress := "localhost:5000"
-	httpAddress := "localhost:5001"
 
-	db, err := database.NewWithInsecureDefaults(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("Could not connect to database: %w", err)
+	cfg := &config.Config{
+		GRPC: config.GRPC{
+			ListenAddress: "localhost",
+			Port:          "5000",
+		},
+		HTTP: config.HTTP{
+			ListenAddress: "localhost",
+			Port:          "5001",
+		},
+		Database: config.Database{
+			Host:     "localhost",
+			Database: "covid19",
+			User:     "covid19",
+			Password: "covid19databasepassword",
+			Port:     "5434",
+		},
 	}
 
-	srv := &Server{
-		ctx:         ctx,
-		grpcAddress: grpcAddress,
-		httpAddress: httpAddress,
-		db:          db,
-		grpcServer:  grpc.NewServer(),
-	}
-	proto.RegisterDiagnosisDBServer(srv.grpcServer, srv)
-
-	return srv, nil
+	return NewFromConfig(ctx, cfg)
 }
 
 func NewFromConfig(ctx context.Context, cfg *config.Config) (*Server, error) {
@@ -78,19 +81,25 @@ func NewFromConfig(ctx context.Context, cfg *config.Config) (*Server, error) {
 }
 
 func (srv *Server) Shutdown() error {
+	log := logging.FromContext(srv.ctx)
+	log.Info("Shutting down server")
+
 	srv.db.Close()
 	return nil
 }
 
 func (srv *Server) ServeGRPC() error {
+	log := logging.FromContext(srv.ctx)
 	lis, err := net.Listen("tcp", srv.grpcAddress)
 	if err != nil {
 		return fmt.Errorf("Could not listen on %s: %w", srv.grpcAddress, err)
 	}
+	log.Infof("Serving GRPC on %s", srv.grpcAddress)
 	return srv.grpcServer.Serve(lis)
 }
 
 func (srv *Server) ServeHTTP() error {
+	log := logging.FromContext(srv.ctx)
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 	err := proto.RegisterDiagnosisDBHandlerFromEndpoint(srv.ctx, mux, srv.grpcAddress, opts)
@@ -98,10 +107,12 @@ func (srv *Server) ServeHTTP() error {
 		return err
 	}
 
+	log.Infof("Serving HTTP on %s", srv.httpAddress)
 	return http.ListenAndServe(srv.httpAddress, mux)
 }
 
 func (srv *Server) AddReport(ctx context.Context, report *proto.Report) (*proto.AddReportResponse, error) {
+	ctx = logging.WithLogger(ctx)
 	err := srv.db.AddReport(ctx, report)
 	if err != nil {
 		return &proto.AddReportResponse{
@@ -112,13 +123,17 @@ func (srv *Server) AddReport(ctx context.Context, report *proto.Report) (*proto.
 }
 
 func (srv *Server) GetDiagnosisKeys(req *proto.GetKeyRequest, client proto.DiagnosisDB_GetDiagnosisKeysServer) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx := logging.WithLogger(srv.ctx)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
 	results, errchan := srv.db.GetDiagnosisKeys(ctx, req)
 	for {
 		select {
 		case err := <-errchan:
+			if err == nil {
+				return nil
+			}
 			serr := client.Send(&proto.GetDiagnosisKeyResponse{
 				Error: err.Error(),
 			})
@@ -143,6 +158,7 @@ func (srv *Server) GetDiagnosisKeys(req *proto.GetKeyRequest, client proto.Diagn
 }
 
 func (srv *Server) GetAuthorizationToken(ctx context.Context, req *proto.TokenRequest) (*proto.TokenResponse, error) {
+	ctx = logging.WithLogger(ctx)
 	one_time_auth_key, err := srv.db.CreateAuthorizationKey(ctx, req)
 	if err != nil {
 		return &proto.TokenResponse{

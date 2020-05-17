@@ -2,12 +2,12 @@ package database
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"net/url"
 	"time"
 
 	"github.com/covista/commons/internal/config"
+	"github.com/covista/commons/internal/logging"
 	"github.com/covista/commons/proto"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
@@ -57,16 +57,19 @@ func NewFromConfig(ctx context.Context, cfg *config.Config) (*Database, error) {
 	db_connection_url := fmt.Sprintf("postgres://%s/%s?sslmode=disable&user=%s&password=%s&port=%s",
 		cfg.Database.Host, cfg.Database.Database, cfg.Database.User, url.QueryEscape(cfg.Database.Password), cfg.Database.Port)
 
+	log := logging.FromContext(ctx)
 	// loop until database is live
 	var pool *pgxpool.Pool
 	var err error
 	for {
-		pool, err = pgxpool.Connect(context.Background(), db_connection_url)
+		pool, err = pgxpool.Connect(ctx, db_connection_url)
 		if err != nil {
-			//return nil, fmt.Errorf("Could not connect to database: %w", err)
+			log.Warnf("Failed to connect to database (%s); retrying in 5 seconds", err.Error())
 			time.Sleep(5 * time.Second)
 		}
+		break
 	}
+	log.Infof("Connected to postgres at %s", cfg.Database.Host)
 	return &Database{
 		pool: pool,
 	}, nil
@@ -107,6 +110,8 @@ func (db *Database) CreateAuthorizationKey(ctx context.Context, request *proto.T
 		return nil, fmt.Errorf("Invalid TokenRequest: %w", err)
 	}
 
+	log := logging.FromContext(ctx)
+
 	err := db.RunAsTransaction(ctx, func(txn pgx.Tx) error {
 		// Checks the validity of the health authority API key by looking at the health_authorities table
 		var (
@@ -118,7 +123,7 @@ func (db *Database) CreateAuthorizationKey(ctx context.Context, request *proto.T
 			return fmt.Errorf("Invalid api_key: %w", err)
 		}
 		// api_key is valid!
-		// TODO: log the authority that is generating an api key
+		log.Infof("Generating one-time auth key for authority %s (%x)", name, authority_id)
 
 		// generate a new one-time authorization key
 		one_time_auth_key, err = uuid.NewRandom()
@@ -146,7 +151,6 @@ func (db *Database) CreateAuthorizationKey(ctx context.Context, request *proto.T
 
 		return nil
 	})
-	fmt.Printf("Returning auth key %s\n", hex.EncodeToString(one_time_auth_key[:]))
 	return one_time_auth_key[:], err
 }
 
@@ -154,12 +158,13 @@ func (db *Database) AddReport(ctx context.Context, report *proto.Report) error {
 	if err := checkReport(report); err != nil {
 		return fmt.Errorf("Invalid Report: %w", err)
 	}
+	log := logging.FromContext(ctx)
 
 	err := db.RunAsTransaction(ctx, func(txn pgx.Tx) error {
 		var permitted_start, permitted_end time.Time
 
 		// validate that authorization_key is valid
-		fmt.Printf("auth key: %s\n", hex.EncodeToString(report.AuthorizationKey))
+		log.Infof("New report with auth key %x", report.AuthorizationKey)
 		err := txn.QueryRow(ctx, `SELECT permitted_start, permitted_end FROM authorization_keys
 						   WHERE authorization_key = $1`, report.AuthorizationKey).Scan(&permitted_start, &permitted_end)
 		if err != nil {
@@ -194,6 +199,9 @@ func (db *Database) GetDiagnosisKeys(ctx context.Context, request *proto.GetKeyR
 		errchan <- fmt.Errorf("Invalid GetKeyRequest: %w", err)
 		return results, errchan
 	}
+
+	log := logging.FromContext(ctx)
+	log.Debugf("Fetching keys for query: health_authority=%x, enin=%d, hrange=%v", request.HAK, request.ENIN, request.Hrange)
 
 	// construct the SQL query for the provided filter
 	query, values, err := buildQuery(request)
