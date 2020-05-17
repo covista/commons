@@ -88,6 +88,10 @@ func (srv *Server) Shutdown() error {
 	return nil
 }
 
+func (srv *Server) Done() <-chan struct{} {
+	return srv.ctx.Done()
+}
+
 func (srv *Server) ServeGRPC() error {
 	log := logging.FromContext(srv.ctx)
 	lis, err := net.Listen("tcp", srv.grpcAddress)

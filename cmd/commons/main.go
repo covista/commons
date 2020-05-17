@@ -14,7 +14,12 @@ func main() {
 		log.Fatal(err)
 	}
 	defer srv.Shutdown()
-	if err := srv.ServeGRPC(); err != nil {
-		log.Fatal(err)
-	}
+	go func() {
+		log.Fatal(srv.ServeGRPC())
+	}()
+	go func() {
+		log.Fatal(srv.ServeHTTP())
+	}()
+
+	<-srv.Done()
 }
