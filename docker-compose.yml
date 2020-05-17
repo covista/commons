@@ -1,0 +1,7 @@
+version: '3'
+
+services:
+  diagnosis-key-pg:
+    build: "./diagnosis-key-pg"
+    ports:
+      - "5434:5432"
