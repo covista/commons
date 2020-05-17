@@ -72,7 +72,7 @@ func checkTimestampedTEK(tek *proto.TimestampedTEK) error {
 func checkGetKeyRequest(req *proto.GetKeyRequest) error {
 	if req == nil {
 		return errors.New("Empty query")
-	} else if len(req.HAK) == 0 && req.ENIN == 0 && req.Hrange == nil {
+	} else if len(req.AuthorityId) == 0 && req.ENIN == 0 && req.Hrange == nil {
 		return errors.New("GetKeyRequest does not define any filters")
 	} else if req.Hrange != nil && (len(req.Hrange.StartDate) == 0 && req.Hrange.Days == 0) {
 		return errors.New("GetKeyRequest.historical_range is empty")

@@ -201,7 +201,7 @@ func (db *Database) GetDiagnosisKeys(ctx context.Context, request *proto.GetKeyR
 	}
 
 	log := logging.FromContext(ctx)
-	log.Debugf("Fetching keys for query: health_authority=%x, enin=%d, hrange=%v", request.HAK, request.ENIN, request.Hrange)
+	log.Debugf("Fetching keys for query: health_authority=%x, enin=%d, hrange=%v", request.AuthorityId, request.ENIN, request.Hrange)
 
 	// construct the SQL query for the provided filter
 	query, values, err := buildQuery(request)

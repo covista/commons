@@ -19,8 +19,8 @@ func buildQuery(request *proto.GetKeyRequest) (string, []interface{}, error) {
 	var err error
 
 	// if health authority identifier is provided...
-	if len(request.HAK) > 0 {
-		query_values = append(query_values, request.HAK)
+	if len(request.AuthorityId) > 0 {
+		query_values = append(query_values, request.AuthorityId)
 		clauses = append(clauses, fmt.Sprintf("authority_id = $%d", len(query_values)))
 		suffix += `JOIN authorization_keys USING (authorization_key)
 			       JOIN health_authorities USING (api_key)`

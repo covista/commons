@@ -44,7 +44,7 @@ message Report {
 
 message GetKeyRequest {
     // retrieve keys for the given health authority
-    bytes HAK = 1;
+    bytes authority_id = 1;
     // retrieve keys for the given day (ENIN rounded 'down'
     // to the nearest day)
     uint32 ENIN = 2;
