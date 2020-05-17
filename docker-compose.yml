@@ -2,6 +2,13 @@ version: '3'
 
 services:
   diagnosis-key-pg:
-    build: "./diagnosis-key-pg"
+    build: "./docker/diagnosis-key-pg"
     ports:
       - "5434:5432"
+  commons-server:
+    build: "./docker/commons-server"
+    depends_on:
+      - "diagnosis-key-pg"
+    ports:
+      - "5000:5000"
+      - "5001:5001"

@@ -56,9 +56,16 @@ func NewFromConfig(ctx context.Context, cfg *config.Config) (*Database, error) {
 	}
 	db_connection_url := fmt.Sprintf("postgres://%s/%s?sslmode=disable&user=%s&password=%s&port=%s",
 		cfg.Database.Host, cfg.Database.Database, cfg.Database.User, url.QueryEscape(cfg.Database.Password), cfg.Database.Port)
-	pool, err := pgxpool.Connect(context.Background(), db_connection_url)
-	if err != nil {
-		return nil, fmt.Errorf("Could not connect to database: %w", err)
+
+	// loop until database is live
+	var pool *pgxpool.Pool
+	var err error
+	for {
+		pool, err = pgxpool.Connect(context.Background(), db_connection_url)
+		if err != nil {
+			//return nil, fmt.Errorf("Could not connect to database: %w", err)
+			time.Sleep(5 * time.Second)
+		}
 	}
 	return &Database{
 		pool: pool,
