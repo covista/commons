@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/covista/commons/config"
+	"github.com/covista/commons/internal/config"
 	"github.com/covista/commons/proto"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"

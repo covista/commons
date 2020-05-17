@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/covista/commons/config"
+	"github.com/covista/commons/internal/config"
 	"github.com/covista/commons/proto"
 )
 

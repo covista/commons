@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/covista/commons/server"
+	"github.com/covista/commons/internal/server"
 )
 
 func main() {
