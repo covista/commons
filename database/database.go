@@ -188,6 +188,7 @@ func (db *Database) GetDiagnosisKeys(ctx context.Context, request *proto.GetKeyR
 		return results, errchan
 	}
 
+	// construct the SQL query for the provided filter
 	query, values, err := buildQuery(request)
 	if err != nil {
 		errchan <- fmt.Errorf("Could not construct query for GetKeyRequest: %w", err)

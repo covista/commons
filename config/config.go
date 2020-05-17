@@ -2,6 +2,7 @@ package config
 
 type Config struct {
 	GRPC     GRPC
+	HTTP     HTTP
 	Database Database
 }
 
@@ -14,6 +15,11 @@ type Database struct {
 }
 
 type GRPC struct {
+	ListenAddress string
+	Port          string
+}
+
+type HTTP struct {
 	ListenAddress string
 	Port          string
 }

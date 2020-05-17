@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/covista/commons/config"
 	"github.com/covista/commons/database"
 	"github.com/covista/commons/proto"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"google.golang.org/grpc"
 )
 
@@ -26,12 +28,16 @@ func checkConfig(cfg *config.Config) error {
 }
 
 type Server struct {
-	db      *database.Database
-	address string
+	ctx         context.Context
+	db          *database.Database
+	grpcAddress string
+	httpAddress string
+	grpcServer  *grpc.Server
 }
 
 func NewWithInsecureDefaults(ctx context.Context) (*Server, error) {
-	address := "localhost:5000"
+	grpcAddress := "localhost:5000"
+	httpAddress := "localhost:5001"
 
 	db, err := database.NewWithInsecureDefaults(ctx)
 	if err != nil {
@@ -39,15 +45,20 @@ func NewWithInsecureDefaults(ctx context.Context) (*Server, error) {
 	}
 
 	srv := &Server{
-		address: address,
-		db:      db,
+		ctx:         ctx,
+		grpcAddress: grpcAddress,
+		httpAddress: httpAddress,
+		db:          db,
+		grpcServer:  grpc.NewServer(),
 	}
+	proto.RegisterDiagnosisDBServer(srv.grpcServer, srv)
 
 	return srv, nil
 }
 
 func NewFromConfig(ctx context.Context, cfg *config.Config) (*Server, error) {
-	address := fmt.Sprintf("%s:%s", cfg.GRPC.ListenAddress, cfg.GRPC.Port)
+	grpcAddress := fmt.Sprintf("%s:%s", cfg.GRPC.ListenAddress, cfg.GRPC.Port)
+	httpAddress := fmt.Sprintf("%s:%s", cfg.HTTP.ListenAddress, cfg.HTTP.Port)
 
 	db, err := database.NewFromConfig(ctx, cfg)
 	if err != nil {
@@ -55,9 +66,13 @@ func NewFromConfig(ctx context.Context, cfg *config.Config) (*Server, error) {
 	}
 
 	srv := &Server{
-		address: address,
-		db:      db,
+		ctx:         ctx,
+		grpcAddress: grpcAddress,
+		httpAddress: httpAddress,
+		db:          db,
+		grpcServer:  grpc.NewServer(),
 	}
+	proto.RegisterDiagnosisDBServer(srv.grpcServer, srv)
 
 	return srv, nil
 }
@@ -68,13 +83,22 @@ func (srv *Server) Shutdown() error {
 }
 
 func (srv *Server) ServeGRPC() error {
-	lis, err := net.Listen("tcp", srv.address)
+	lis, err := net.Listen("tcp", srv.grpcAddress)
 	if err != nil {
-		return fmt.Errorf("Could not listen on %s: %w", srv.address, err)
+		return fmt.Errorf("Could not listen on %s: %w", srv.grpcAddress, err)
 	}
-	grpcServer := grpc.NewServer()
-	proto.RegisterDiagnosisDBServer(grpcServer, srv)
-	return grpcServer.Serve(lis)
+	return srv.grpcServer.Serve(lis)
+}
+
+func (srv *Server) ServeHTTP() error {
+	mux := runtime.NewServeMux()
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+	err := proto.RegisterDiagnosisDBHandlerFromEndpoint(srv.ctx, mux, srv.grpcAddress, opts)
+	if err != nil {
+		return err
+	}
+
+	return http.ListenAndServe(srv.httpAddress, mux)
 }
 
 func (srv *Server) AddReport(ctx context.Context, report *proto.Report) (*proto.AddReportResponse, error) {
