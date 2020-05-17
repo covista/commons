@@ -1,0 +1,307 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "commons.proto",
+    "version": "version not set"
+  },
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/diagnosis/add_report": {
+      "post": {
+        "summary": "add an authorized report to the database",
+        "operationId": "DiagnosisDB_AddReport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/protoAddReportResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/protoReport"
+            }
+          }
+        ],
+        "tags": [
+          "DiagnosisDB"
+        ]
+      }
+    },
+    "/v1/diagnosis/get_authorization_token": {
+      "post": {
+        "summary": "allows authorized healthcare professional to obtain a unique authorization\nkey to give to a patient",
+        "operationId": "DiagnosisDB_GetAuthorizationToken",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/protoTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/protoTokenRequest"
+            }
+          }
+        ],
+        "tags": [
+          "DiagnosisDB"
+        ]
+      }
+    },
+    "/v1/diagnosis/get_diagnosis_keys": {
+      "post": {
+        "summary": "query for all TEK+ENIN pairs matching the given filter. Predicates include:\n- for a health authority\n- between two timestamps",
+        "operationId": "DiagnosisDB_GetDiagnosisKeys",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/protoGetDiagnosisKeyResponse"
+                },
+                "error": {
+                  "$ref": "#/definitions/runtimeStreamError"
+                }
+              },
+              "title": "Stream result of protoGetDiagnosisKeyResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/protoGetKeyRequest"
+            }
+          }
+        ],
+        "tags": [
+          "DiagnosisDB"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "protoAddReportResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "protoGetDiagnosisKeyResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "record": {
+          "$ref": "#/definitions/protoTimestampedTEK"
+        }
+      }
+    },
+    "protoGetKeyRequest": {
+      "type": "object",
+      "properties": {
+        "HAK": {
+          "type": "string",
+          "format": "byte",
+          "title": "retrieve keys for the given health authority"
+        },
+        "ENIN": {
+          "type": "integer",
+          "format": "int64",
+          "title": "retrieve keys for the given day (ENIN rounded 'down'\nto the nearest day)"
+        },
+        "hrange": {
+          "$ref": "#/definitions/protoHistoricalRange",
+          "title": "alternatively fetch a temporal range of keys"
+        }
+      }
+    },
+    "protoHistoricalRange": {
+      "type": "object",
+      "properties": {
+        "start_date": {
+          "type": "string",
+          "title": "YYYY-MM-DD  of *end* of day range; defaults to the current day"
+        },
+        "days": {
+          "type": "integer",
+          "format": "int64",
+          "title": "how many days back to retrieve records; defaults to 1"
+        }
+      }
+    },
+    "protoKeyType": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "DIAGNOSED"
+      ],
+      "default": "UNKNOWN"
+    },
+    "protoReport": {
+      "type": "object",
+      "properties": {
+        "authorization_key": {
+          "type": "string",
+          "format": "byte",
+          "title": "a unique authorization key given to the user upon\ninteraction with an authorized (healthcare) professional"
+        },
+        "reports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protoTimestampedTEK"
+          },
+          "title": "a set of timestamp-enin pairs (from the user)"
+        }
+      }
+    },
+    "protoTimestampedTEK": {
+      "type": "object",
+      "properties": {
+        "TEK": {
+          "type": "string",
+          "format": "byte"
+        },
+        "ENIN": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "protoTokenRequest": {
+      "type": "object",
+      "properties": {
+        "api_key": {
+          "type": "string",
+          "format": "byte",
+          "title": "secret API key that uniquely identifies an authorized organization"
+        },
+        "key_type": {
+          "$ref": "#/definitions/protoKeyType",
+          "title": "the kind of key being requested; this is stored in the backend along\nwith the generated authorization_key"
+        },
+        "permitted_range_start": {
+          "type": "string",
+          "title": "bounds on the time range for the allowed keys; RFC 3339 timestamps"
+        },
+        "permitted_range_end": {
+          "type": "string"
+        }
+      }
+    },
+    "protoTokenResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "authorization_key": {
+          "type": "string",
+          "format": "byte",
+          "title": "unique 16-byte key generated to be given to a user. The generation\nof this key means that the association of \u003cauthority, auth_key\u003e is\nstored in the backend"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "type_url": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "runtimeError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "runtimeStreamError": {
+      "type": "object",
+      "properties": {
+        "grpc_code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "http_code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "http_status": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

@@ -2,18 +2,35 @@ syntax = "proto3";
 package proto;
 option go_package = ".;proto";
 
+import "google/api/annotations.proto";
+
 service DiagnosisDB {
     // add an authorized report to the database
-    rpc AddReport(Report) returns (AddReportResponse) {};
+    rpc AddReport(Report) returns (AddReportResponse) {
+         option (google.api.http) = {
+           post: "/v1/diagnosis/add_report"
+           body: "*"
+         };
+    };
 
     // query for all TEK+ENIN pairs matching the given filter. Predicates include:
     // - for a health authority
     // - between two timestamps
-    rpc GetDiagnosisKeys(GetKeyRequest) returns (stream GetDiagnosisKeyResponse) {};
+    rpc GetDiagnosisKeys(GetKeyRequest) returns (stream GetDiagnosisKeyResponse) {
+         option (google.api.http) = {
+           post: "/v1/diagnosis/get_diagnosis_keys"
+           body: "*"
+         };
+    };
 
     // allows authorized healthcare professional to obtain a unique authorization
     // key to give to a patient
-    rpc GetAuthorizationToken(TokenRequest) returns (TokenResponse) {};
+    rpc GetAuthorizationToken(TokenRequest) returns (TokenResponse) {
+         option (google.api.http) = {
+           post: "/v1/diagnosis/get_authorization_token"
+           body: "*"
+         };
+    };
 }
 
 message Report {
