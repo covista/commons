@@ -105,6 +105,7 @@ func (db *Database) RunAsTransaction(ctx context.Context, f func(txn pgx.Tx) err
 // Create a one-time use authorization key to be given to a patient.
 func (db *Database) CreateAuthorizationKey(ctx context.Context, request *proto.TokenRequest) ([]byte, error) {
 	var one_time_auth_key uuid.UUID
+	authKeysCreateAttempts.Inc()
 	// check sanity of tokenrequest
 	if err := checkTokenRequest(request); err != nil {
 		return nil, fmt.Errorf("Invalid TokenRequest: %w", err)
@@ -148,6 +149,7 @@ func (db *Database) CreateAuthorizationKey(ctx context.Context, request *proto.T
 		if err != nil {
 			return fmt.Errorf("Could not insert new one-time auth key: %w", err)
 		}
+		authKeysCreated.Inc()
 
 		return nil
 	})
@@ -155,6 +157,7 @@ func (db *Database) CreateAuthorizationKey(ctx context.Context, request *proto.T
 }
 
 func (db *Database) AddReport(ctx context.Context, report *proto.Report) error {
+	addReportAttempts.Inc()
 	if err := checkReport(report); err != nil {
 		return fmt.Errorf("Invalid Report: %w", err)
 	}
@@ -185,6 +188,7 @@ func (db *Database) AddReport(ctx context.Context, report *proto.Report) error {
 				return fmt.Errorf("Could not insert report %d into database: %w", idx, err)
 			}
 		}
+		addReportSuccess.Inc()
 
 		return nil
 	})
@@ -192,6 +196,7 @@ func (db *Database) AddReport(ctx context.Context, report *proto.Report) error {
 }
 
 func (db *Database) GetDiagnosisKeys(ctx context.Context, request *proto.GetKeyRequest) (chan *proto.TimestampedTEK, chan error) {
+	getDiagnosisKeysAttempts.Inc()
 	results := make(chan *proto.TimestampedTEK)
 	errchan := make(chan error, 1)
 
@@ -212,6 +217,7 @@ func (db *Database) GetDiagnosisKeys(ctx context.Context, request *proto.GetKeyR
 
 	go func() {
 		err := db.RunAsTransaction(ctx, func(txn pgx.Tx) error {
+			start := time.Now()
 			rows, err := txn.Query(ctx, query, values...)
 			if err != nil {
 				return fmt.Errorf("Could not get reported keys: %w", err)
@@ -228,6 +234,8 @@ func (db *Database) GetDiagnosisKeys(ctx context.Context, request *proto.GetKeyR
 					ENIN: uint32(enin.Unix() / 600),
 				}
 			}
+			getDiagnosisKeysSuccess.Inc()
+			getDiagnosisKeysTime.Observe(float64(time.Since(start).Milliseconds()))
 			close(results)
 			return rows.Err()
 		})
