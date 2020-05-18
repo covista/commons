@@ -3,19 +3,27 @@
 
 ## Setup
 
-0. Make sure to initialize the `googleapis` submodule if you are editing the .proto definitions and install protobuf libraries
+0. Make sure to initialize the `googleapis` submodule if you are editing the .proto definitions
     ```
-    sudo apt install libprotobuf-dev  # or equivalent on other systems
     git submodule update --init --recursive
     ```
 
-1. Compile server and proto files
+1. Install dependencies:
+    ```
+    sudo apt install libprotobuf-dev  # or equivalent on other systems
+    go install \
+        github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway \
+        github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger \
+        github.com/golang/protobuf/protoc-gen-go
+    ```
+
+2. Compile server and proto files
     ```
     make proto # if necessary
     make commons-server
     ```
 
-2. Build Docker files and deploy. **Note: you will need to rebuild the commons-server using `make` before running `docker-compose`; the Dockerfile uses the prebuilt binary**
+3. Build Docker files and deploy. **Note: you will need to rebuild the commons-server using `make` before running `docker-compose`; the Dockerfile uses the prebuilt binary**
     ```
     docker-compose build
     docker-compose up
