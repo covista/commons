@@ -14,3 +14,6 @@ commons-server
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# python bytecode
+*.pyc
