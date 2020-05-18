@@ -3,8 +3,9 @@
 
 ## Setup
 
-0. Make sure to initialize the `googleapis` submodule if you are editing the .proto definitions:
+0. Make sure to initialize the `googleapis` submodule if you are editing the .proto definitions and install protobuf libraries
     ```
+    sudo apt install libprotobuf-dev  # or equivalent on other systems
     git submodule update --init --recursive
     ```
 
