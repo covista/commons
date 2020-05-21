@@ -31,7 +31,6 @@ ADD setup.sql /docker-entrypoint-initdb.d/
 
 RUN pg_lsclusters
 
-ENV DEBIAN_FRONTEND=noninteractive
 # PostgreSQL ENV variables
 ENV POSTGRES_USER=covid19
 ENV POSTGRES_PASSWORD=covid19databasepassword
