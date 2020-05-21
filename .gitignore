@@ -17,3 +17,6 @@ commons-server
 
 # python bytecode
 *.pyc
+
+# Postgresql persistent data
+pg-data/
