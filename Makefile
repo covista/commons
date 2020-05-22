@@ -1,5 +1,3 @@
-.PHONY: proto
-
 PROTO_GENFILES = proto/commons.pb.go proto/commons.pb.gw.go
 
 commons-server: $(PROTO_GENFILES) cmd/commons/main.go
