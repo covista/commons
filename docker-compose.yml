@@ -8,7 +8,9 @@ services:
     volumes:
       - "./pg-data/:/data/"
   commons-server:
-    build: "./docker/commons-server"
+    build:
+      context: .
+      dockerfile: "./docker/commons-server/Dockerfile"
     depends_on:
       - "diagnosis-key-pg"
     environment:

@@ -2,6 +2,13 @@
 
 
 ## Setup
+```
+docker-compose build
+docker-compose up
+```
+
+### Building `commons-server` From Source
+Docker will take care of building the binary, but you can also do it yourself.
 
 0. Make sure to initialize the `googleapis` submodule if you are editing the .proto definitions
     ```
@@ -11,6 +18,8 @@
 1. Install dependencies:
     ```
     sudo apt install libprotobuf-dev  # or equivalent on other systems
+    sudo apt install protobuf-compiler
+    pip3 install grpcio-tools
     go install \
         github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway \
         github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger \
@@ -21,12 +30,6 @@
     ```
     make proto # if necessary
     make commons-server
-    ```
-
-3. Build Docker files and deploy. **Note: you will need to rebuild the commons-server using `make` before running `docker-compose`; the Dockerfile uses the prebuilt binary**
-    ```
-    docker-compose build
-    docker-compose up
     ```
 
 ## Simulation

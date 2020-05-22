@@ -1,5 +1,26 @@
+# Build image
+FROM golang AS builder
+
+WORKDIR /app
+
+COPY . .
+
+RUN go install \
+      github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway \
+      github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger \
+      github.com/golang/protobuf/protoc-gen-go
+
+RUN apt update && apt install -y \
+      protobuf-compiler \
+      python3-pip
+
+RUN pip3 install grpcio-tools
+
+RUN make commons-server
+
+# Runtime image
 FROM ubuntu:19.10
 
-ADD commons-server /bin/commons-server
+COPY --from=builder /app/commons-server .
 
-CMD ["commons-server"]
+CMD ["./commons-server"]

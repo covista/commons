@@ -1,0 +1,11 @@
+- name: Clone the coviddb repo
+  git:
+    repo: "https://github.com/covista/commons"
+    dest: "{{ covidcommons_path }}"
+    update: no
+
+- name: Run docker compose
+  become: yes
+  docker_compose:
+    state: present
+    project_src: "{{ covidcommons_path }}"
