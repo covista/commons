@@ -28,8 +28,7 @@ Docker will take care of building the binary, but you can also do it yourself.
 
 2. Compile server and proto files
     ```
-    make proto # if necessary
-    make commons-server
+    make
     ```
 
 ## Simulation
