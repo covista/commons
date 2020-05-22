@@ -5,6 +5,8 @@ services:
     build: "./docker/diagnosis-key-pg"
     ports:
       - "5434:5432"
+    volumes:
+      - "./pg-data/:/data/"
   commons-server:
     build: "./docker/commons-server"
     depends_on:
