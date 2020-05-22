@@ -19,8 +19,7 @@
 
 2. Compile server and proto files
     ```
-    make proto # if necessary
-    make commons-server
+    make
     ```
 
 3. Build Docker files and deploy. **Note: you will need to rebuild the commons-server using `make` before running `docker-compose`; the Dockerfile uses the prebuilt binary**
